@@ -34,10 +34,15 @@ class Depreciable extends SnipeModel
     }
 
     /**
+     * @param \DateTime $relative_to
      * @return float|int
      */
-    public function getDepreciatedValue()
+    public function getDepreciatedValue($relative_to = null)
     {
+        if (is_null($relative_to)) {
+            $relative_to = now();
+        }
+
         if (! $this->get_depreciation()) { // will never happen
             return $this->purchase_cost;
         }
@@ -49,27 +54,28 @@ class Depreciable extends SnipeModel
         $setting = Setting::getSettings();
         switch ($setting->depreciation_method) {
             case 'half_1':
-            $depreciation = $this->getHalfYearDepreciatedValue(true);
+            $depreciation = $this->getHalfYearDepreciatedValue($relative_to, true);
             break;
 
             case 'half_2':
-            $depreciation = $this->getHalfYearDepreciatedValue(false);
+            $depreciation = $this->getHalfYearDepreciatedValue($relative_to, false);
             break;
 
             default:
-            $depreciation = $this->getLinearDepreciatedValue();
+            $depreciation = $this->getLinearDepreciatedValue($relative_to);
         }
 
         return $depreciation;
     }
 
     /**
+     * @param \DateTime $relative_to
      * @return float|int
      */
-    public function getLinearDepreciatedValue() // TODO - for testing it might be nice to have an optional $relative_to param here, defaulted to 'now'
+    public function getLinearDepreciatedValue($relative_to)
     {
         if (($this->get_depreciation()) && ($this->purchase_date)) {
-            $months_passed = ($this->purchase_date->diff(now())->m)+($this->purchase_date->diff(now())->y*12);
+            $months_passed = ($this->purchase_date->diff($relative_to)->m)+($this->purchase_date->diff($relative_to)->y*12);
         } else {
             return null;
         }
@@ -100,15 +106,15 @@ class Depreciable extends SnipeModel
     }
 
     /**
+     * @param \DateTime $relative_to
      * @param onlyHalfFirstYear Boolean always applied only second half of the first year
      * @return float|int
      */
-    public function getHalfYearDepreciatedValue($onlyHalfFirstYear = false)
+    public function getHalfYearDepreciatedValue($relative_to, $onlyHalfFirstYear = false)
     {
         // @link http://www.php.net/manual/en/class.dateinterval.php
-        $current_date = $this->getDateTime();
         $purchase_date = date_create($this->purchase_date);
-        $currentYear = $this->get_fiscal_year($current_date);
+        $currentYear = $this->get_fiscal_year($relative_to);
         $purchaseYear = $this->get_fiscal_year($purchase_date);
         $yearsPast = $currentYear - $purchaseYear;
         $deprecationYears = ceil($this->get_depreciation()->months / 12);
@@ -117,7 +123,7 @@ class Depreciable extends SnipeModel
         } elseif (! $this->is_first_half_of_year($purchase_date)) {
             $yearsPast -= 0.5;
         }
-        if (! $this->is_first_half_of_year($current_date)) {
+        if (! $this->is_first_half_of_year($relative_to)) {
             $yearsPast += 0.5;
         }
 
@@ -177,11 +183,5 @@ class Depreciable extends SnipeModel
         date_add($date, date_interval_create_from_date_string($this->get_depreciation()->months.' months'));
 
         return $date; //date_format($date, 'Y-m-d'); //don't bake-in format, for internationalization
-    }
-
-    // it's necessary for unit tests
-    protected function getDateTime($time = null)
-    {
-        return new \DateTime($time);
     }
 }

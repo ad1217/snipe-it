@@ -95,7 +95,7 @@ class AssetsTransformer
             'checkout_counter' => (int) $asset->checkout_counter,
             'requests_counter' => (int) $asset->requests_counter,
             'user_can_checkout' => (bool) $asset->availableForCheckout(),
-            'book_value' => Helper::formatCurrencyOutput($asset->getLinearDepreciatedValue()),
+            'book_value' => Helper::formatCurrencyOutput($asset->getDepreciatedValue()),
         ];
 
 

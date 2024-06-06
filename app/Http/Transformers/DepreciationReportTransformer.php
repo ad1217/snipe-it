@@ -4,6 +4,7 @@ namespace App\Http\Transformers;
 use App\Helpers\Helper;
 use App\Models\Asset;
 use Illuminate\Database\Eloquent\Collection;
+use Carbon;
 
 /**
  *  This tranformer looks like it's extraneous, since we return as much or more
@@ -17,17 +18,17 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class DepreciationReportTransformer
 {
-    public function transformAssets(Collection $assets, $total)
+    public function transformAssets(Collection $assets, $total, $request)
     {
         $array = array();
         foreach ($assets as $asset) {
-            $array[] = self::transformAsset($asset);
+            $array[] = self::transformAsset($asset, $request);
         }
         return (new DatatablesTransformer)->transformDatatables($array, $total);
     }
 
 
-    public function transformAsset(Asset $asset)
+    public function transformAsset(Asset $asset, $request)
     {
 
         /**
@@ -62,14 +63,15 @@ class DepreciationReportTransformer
          * Override the previously set null values if there is a valid model and associated depreciation
          */
         if (($asset->model) && ($asset->model->depreciation)) {
-            $depreciated_value = Helper::formatCurrencyOutput($asset->getDepreciatedValue());
+            $relative_to = $request->filled('relative_to') ? Carbon::createFromFormat("Y-m-d", $request->relative_to) : null;
+            $depreciated_value = Helper::formatCurrencyOutput($asset->getDepreciatedValue($relative_to));
             if($asset->model->eol==0 || $asset->model->eol==null ){
                 $monthly_depreciation = Helper::formatCurrencyOutput($asset->purchase_cost / $asset->model->depreciation->months);
             }
             else {
                 $monthly_depreciation = Helper::formatCurrencyOutput(($asset->model->eol > 0 ? ($asset->purchase_cost / $asset->model->eol) : 0));
             }
-            $diff = Helper::formatCurrencyOutput(($asset->purchase_cost - $asset->getDepreciatedValue()));
+            $diff = Helper::formatCurrencyOutput(($asset->purchase_cost - $asset->getDepreciatedValue($relative_to)));
         }
 
 

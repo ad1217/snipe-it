@@ -17,6 +17,15 @@
 
           @if (($depreciations) && ($depreciations->count() > 0))
           <div class="table-responsive">
+                  <div id="depreciationDateToolbar" class="form-inline">
+                    <input
+                      class="form-control"
+                      data-provide="datepicker-inline"
+                      data-date-format="yyyy-mm-dd"
+                      data-date-clear-btn="true"
+                      placeholder="Relative to Date"
+                      name="relative-to" />
+                  </div>
 
                   <table
                         data-cookie-id-table="depreciationReport"
@@ -30,6 +39,7 @@
                         data-sort-order="desc"
                         data-sort-name="created_at"
                         data-show-footer="true"
+                        data-toolbar="#depreciationDateToolbar"
                         id="depreciationReport"
                         data-url="{{ route('api.depreciation-report.index') }}"
                         data-mobile-responsive="true"
@@ -60,4 +70,23 @@
 
 @section('moar_scripts')
     @include ('partials.bootstrap-table')
+
+    <script>
+    $(function () {
+        var oldQueryParams = $('#depreciationReport').bootstrapTable('getOptions').queryParams;
+        $('#depreciationReport').bootstrapTable('refreshOptions', {
+            queryParams: function(params) {
+                oldQueryParams(params);
+    	        params.relative_to=$('#depreciationDateToolbar input[name="relative-to"]').val();
+                return params;
+  	        }
+        });
+
+      $('#depreciationDateToolbar input[name="relative-to"]')
+          .datepicker()
+          .on('changeDate', function() {
+              $('#depreciationReport').bootstrapTable('refresh');
+          });
+    });
+    </script>
 @stop
